@@ -4,6 +4,17 @@ Black holes that float over your real macOS desktop — lensing your windows, Do
 wallpaper, and lensing each other. Plus a draggable **pet** black hole you drop files
 onto to send them to the Trash.
 
+<table>
+  <tr>
+    <td width="50%"><img src="gallery/BBH.png" alt="Two black holes lensing the live desktop"></td>
+    <td width="50%"><img src="gallery/BH-pet-as-trash-can.png" alt="Dropping a file onto the pet black hole to trash it"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Two holes drift over the desktop — each warps the windows behind it and bends the other, with accretion-disk glow and a photon ring.</em></td>
+    <td align="center"><em>The file-eating pet: drag any file onto the little hole to send it to the Trash. It lenses the desktop right behind it, too.</em></td>
+  </tr>
+</table>
+
 ## Quick start
 
 ```sh
