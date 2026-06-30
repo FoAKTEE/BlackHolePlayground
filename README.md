@@ -1,4 +1,4 @@
-# Ghostty Blackhole — desktop port
+# BlackHolePlayground
 
 **Multiple** black holes that float over your **real macOS desktop** — lensing
 your actual windows, Dock, and wallpaper, *and lensing each other* — with a live
@@ -64,7 +64,7 @@ The friendliest way is a **double-click installer**. Build it once with:
 bash build.sh pkg
 ```
 
-That produces **`dist/Ghostty Black Holes Installer.pkg`** and reveals it in Finder.
+That produces **`dist/BlackHolePlayground Installer.pkg`** and reveals it in Finder.
 **Double-click that .pkg** and the standard macOS installer walks you through it —
 no terminal after this point. It installs to /Applications; open it from Spotlight
 or Launchpad. The .pkg can be kept or shared, and re-installed entirely via the GUI.
@@ -91,7 +91,7 @@ forever:
 - **macOS 13 / 14:** Control-click (right-click) the app in Finder → **Open** →
   **Open**.
 - **macOS 15 Sequoia:** open  → **System Settings → Privacy & Security**, scroll
-  to *"GhosttyBlackholeDesktop was blocked,"* and click **Open Anyway**.
+  to *"BlackHolePlayground was blocked,"* and click **Open Anyway**.
 
 `bash build.sh install` strips the quarantine flag for you, so an app installed
 that way usually opens directly; an app installed from the **.pkg** needs the
@@ -108,8 +108,8 @@ result. Without that, the one-time "Open Anyway" is the expected path.
 1. **File ▸ New ▸ Project ▸ macOS ▸ App.** Language Swift. (Interface/lifecycle
    choice doesn't matter — you'll delete the generated files.)
 2. Delete the auto-generated `*App.swift` / `ContentView.swift` / `AppDelegate`.
-3. Drag the eight files from `Sources/` into the project (check *Copy items*).
-   `Shaders.metal` compiles automatically into the default Metal library.
+3. Drag the `Sources/` folder into the project (check *Copy items*, create groups).
+   `Rendering/Shaders.metal` compiles automatically into the default Metal library.
 4. In the target's **Info** tab add **Application is agent (UIElement)** = `YES`.
 5. In **Signing & Capabilities**, leave App Sandbox **off** for local use
    (sandbox + screen capture needs extra entitlements you don't want to fight for
@@ -188,8 +188,27 @@ Two behaviours turn the holes into a working companion:
 > "drop files here" without touching anything else on screen.
 
 A few shape constants (disk flatten ratio, ring/halo radii, chromatic amount) are
-still fixed near the top and middle of `Sources/Shaders.metal` if you want to dig
-deeper; everything in the table above is runtime.
+still fixed near the top and middle of `Sources/Rendering/Shaders.metal` if you want
+to dig deeper; everything in the table above is runtime.
+
+## Project layout
+
+The sources are grouped by concern under `Sources/`:
+
+```
+Sources/
+  App/        main.swift, AppDelegate.swift            — entry point + wiring
+  Core/       ControlSettings.swift                    — shared, observable settings
+              GPUTypes.swift                           — CPU mirror of the Metal structs
+              Simulation.swift                         — CPU hole dynamics
+              Idle.swift                               — system idle time (HID)
+  Rendering/  Renderer.swift, Shaders.metal            — the Metal pass + fragment shader
+  Capture/    ScreenCaptureManager.swift, FrameStore.swift — live screen feed + hand-off
+  UI/         OverlayWindow.swift, PetWindow.swift, ControlPanel.swift — windows + panel
+```
+
+`build.sh` compiles every `.swift` under `Sources/` (any depth) and bundles
+`Shaders.metal`, so you can rearrange the tree freely without editing the script.
 
 ## Known caveats (the honest ones)
 
@@ -229,9 +248,10 @@ deeper; everything in the table above is runtime.
 
 ## Credit & license
 
+Released under the **MIT License** — see [`LICENSE`](LICENSE).
+
 Ported from **s0xDk/ghostty-blackhole** (MIT), inspired by Eric Bruneton's
-black-hole shader. The lensing, accretion disk, photon ring, and doppler-beaming
+black-hole shader. The lensing, accretion disk, photon ring, and Doppler-beaming
 math come from that project; the multi-hole extension, screen-capture, overlay,
-compositing, CPU simulation, and control panel are this port. Retain the original
-MIT
-notice if you redistribute.
+compositing, CPU simulation, and control panel are this port. The upstream MIT
+notice is retained in `LICENSE`; keep it if you redistribute.

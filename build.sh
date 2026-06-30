@@ -22,15 +22,16 @@ if ! xcode-select -p >/dev/null 2>&1 || ! command -v swiftc >/dev/null 2>&1; the
     exit 1
 fi
 
-APP="GhosttyBlackholeDesktop"
-BUNDLE_ID="com.example.ghostty-blackhole-desktop"
+APP="BlackHolePlayground"
+DISPLAY_NAME="Black Hole Playground"
+BUNDLE_ID="com.example.blackholeplayground"
 BUILD="build"
 BUNDLE="$BUILD/$APP.app"
 MACOS="$BUNDLE/Contents/MacOS"
 RES="$BUNDLE/Contents/Resources"
 
-# --- locate sources: a Sources/ subfolder, or a flat folder (all files together) ---
-if [ -d "Sources" ] && ls Sources/*.swift >/dev/null 2>&1; then
+# --- locate sources: the Sources/ module tree, or a flat folder (all files together) ---
+if [ -d "Sources" ]; then
     SRC="Sources"
 elif ls ./*.swift >/dev/null 2>&1; then
     SRC="."
@@ -41,36 +42,35 @@ else
     exit 1
 fi
 
-NEEDED=(Shaders.metal main.swift AppDelegate.swift OverlayWindow.swift PetWindow.swift ScreenCaptureManager.swift Renderer.swift Idle.swift Simulation.swift ControlPanel.swift)
-MISSING=0
-for f in "${NEEDED[@]}"; do
-    [ -f "$SRC/$f" ] || { echo "missing file: $SRC/$f" >&2; MISSING=1; }
-done
-if [ "$MISSING" -ne 0 ]; then
-    echo >&2
-    echo "Put all of these files together in one folder (flat is fine) and rerun:" >&2
-    printf '  %s\n' "${NEEDED[@]}" build.sh >&2
+# Compile every .swift under the source root (any depth), and locate the Metal shader —
+# so the module layout under Sources/ can be reorganized freely without touching this script.
+SWIFT_FILES=()
+while IFS= read -r f; do SWIFT_FILES+=("$f"); done < <(find "$SRC" -name '*.swift' | sort)
+SHADER=$(find "$SRC" -name 'Shaders.metal' | head -1)
+if [ "${#SWIFT_FILES[@]}" -eq 0 ] || [ -z "$SHADER" ]; then
+    echo "error: no Swift files and/or Shaders.metal found under $SRC/." >&2
     exit 1
 fi
-echo "› sources: $SRC/"
+echo "› sources: $SRC/ (${#SWIFT_FILES[@]} Swift files)"
 
 rm -rf "$BUILD"
 mkdir -p "$MACOS" "$RES"
 
 echo "› bundling Metal shader (compiled at runtime — no Metal toolchain needed)"
-cp "$SRC/Shaders.metal" "$RES/Shaders.metal"
+cp "$SHADER" "$RES/Shaders.metal"
+
+# App icon: ship the prebuilt .icns (derived from Resources/C-logo.png — regenerate with
+# tools/make-icon.sh). Optional; the build still works without it.
+ICON_FILE=""
+if [ -f "Resources/AppIcon.icns" ]; then
+    cp "Resources/AppIcon.icns" "$RES/AppIcon.icns"
+    ICON_FILE="AppIcon"
+    echo "› bundling app icon (AppIcon.icns)"
+fi
 
 echo "› compiling Swift"
 xcrun -sdk macosx swiftc -O \
-    "$SRC/main.swift" \
-    "$SRC/AppDelegate.swift" \
-    "$SRC/OverlayWindow.swift" \
-    "$SRC/PetWindow.swift" \
-    "$SRC/ScreenCaptureManager.swift" \
-    "$SRC/Renderer.swift" \
-    "$SRC/Idle.swift" \
-    "$SRC/Simulation.swift" \
-    "$SRC/ControlPanel.swift" \
+    "${SWIFT_FILES[@]}" \
     -framework Cocoa \
     -framework Metal \
     -framework MetalKit \
@@ -87,14 +87,18 @@ xcrun -sdk macosx swiftc -O \
     -o "$MACOS/$APP"
 
 echo "› writing Info.plist"
+ICON_PLIST=""
+[ -n "$ICON_FILE" ] && ICON_PLIST="    <key>CFBundleIconFile</key>        <string>$ICON_FILE</string>"
 cat > "$BUNDLE/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>            <string>$APP</string>
+    <key>CFBundleDisplayName</key>     <string>$DISPLAY_NAME</string>
     <key>CFBundleExecutable</key>      <string>$APP</string>
     <key>CFBundleIdentifier</key>      <string>$BUNDLE_ID</string>
+$ICON_PLIST
     <key>CFBundlePackageType</key>     <string>APPL</string>
     <key>CFBundleShortVersionString</key> <string>1.0</string>
     <key>CFBundleVersion</key>         <string>1</string>
@@ -131,7 +135,7 @@ elif [ "${1:-}" = "pkg" ]; then
     DIST="dist"
     PKGROOT="$BUILD/pkgroot"
     COMPONENT="$BUILD/${APP}-component.pkg"
-    OUT="$DIST/Ghostty Black Holes Installer.pkg"
+    OUT="$DIST/BlackHolePlayground Installer.pkg"
     echo "› building installer package"
     rm -rf "$PKGROOT" "$DIST"
     mkdir -p "$PKGROOT/Applications" "$DIST"
